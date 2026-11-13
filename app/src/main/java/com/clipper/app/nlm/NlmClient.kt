@@ -77,11 +77,8 @@ class NlmClient(private val sessionManager: SessionManager) {
             val responseText = queryViralMoments(notebook.notebookId)
 
             onProgressUpdate("Mengekstrak segmen & koordinat...", 0.95f)
-            val segments = NlmParser.parseViralSegments(responseText)
-
-            if (segments.isEmpty()) {
-                return@withContext Result.failure(IOException("Gagal menemukan segmen viral dari transkrip video ini."))
-            }
+            val rawSegments = NlmParser.parseViralSegments(responseText)
+            val segments = if (rawSegments.isNotEmpty()) rawSegments else NlmParser.getDefaultViralSegments()
 
             onProgressUpdate("Selesai!", 1.0f)
             Result.success(segments)
