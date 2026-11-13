@@ -51,7 +51,17 @@ class SessionManager(context: Context) {
         prefs.edit().putString(KEY_CSRF_TOKEN, token).apply()
     }
 
+    fun getGeminiApiKey(): String? {
+        return prefs.getString(KEY_GEMINI_KEY, null)
+    }
+
+    fun saveGeminiApiKey(key: String) {
+        prefs.edit().putString(KEY_GEMINI_KEY, key).apply()
+        _isLoggedIn.value = true
+    }
+
     fun hasValidSession(): Boolean {
+        if (!getGeminiApiKey().isNullOrBlank()) return true
         val cookies = getCookies()
         // Essential Google session identifiers
         return cookies.contains("SID=") || 
@@ -70,5 +80,6 @@ class SessionManager(context: Context) {
         const val NOTEBOOKLM_URL = "https://notebooklm.google.com"
         private const val KEY_COOKIES = "google_cookies"
         private const val KEY_CSRF_TOKEN = "google_csrf_token"
+        private const val KEY_GEMINI_KEY = "gemini_api_key"
     }
 }

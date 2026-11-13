@@ -114,7 +114,10 @@ class MainActivity : ComponentActivity() {
                             onDismiss = { viewModel.dismissLogin() },
                             onLoginSuccess = { cookies, csrfToken ->
                                 viewModel.onLoginSuccess(cookies, csrfToken)
-                                Toast.makeText(this@MainActivity, "Berhasil terhubung ke Google NotebookLM!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(this@MainActivity, "Berhasil terhubung ke AI!", Toast.LENGTH_SHORT).show()
+                            },
+                            onSaveApiKey = { apiKey ->
+                                viewModel.sessionManager.saveGeminiApiKey(apiKey)
                             }
                         )
                     }

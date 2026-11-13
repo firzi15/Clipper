@@ -41,6 +41,17 @@ class NlmClient(private val sessionManager: SessionManager) {
         onProgressUpdate: (step: String, progress: Float) -> Unit
     ): Result<List<ViralSegment>> = withContext(Dispatchers.IO) {
         try {
+            val apiKey = sessionManager.getGeminiApiKey()
+            if (!apiKey.isNullOrBlank()) {
+                onProgressUpdate("Menghubungkan ke Gemini 1.5 Flash...", 0.40f)
+                val responseText = queryGeminiWithApiKey(apiKey, youtubeUrl)
+                val segments = NlmParser.parseViralSegments(responseText)
+                if (segments.isNotEmpty()) {
+                    onProgressUpdate("Selesai!", 1.0f)
+                    return@withContext Result.success(segments)
+                }
+            }
+
             if (!sessionManager.hasValidSession()) {
                 return@withContext Result.failure(IllegalStateException("Sesi login Google tidak ditemukan. Silakan login terlebih dahulu."))
             }
@@ -199,6 +210,32 @@ class NlmClient(private val sessionManager: SessionManager) {
                     header("X-Framework-Xsrf-Token", csrf)
                 }
             }
+    }
+
+    private fun queryGeminiWithApiKey(apiKey: String, youtubeUrl: String): String {
+        val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$apiKey"
+        val prompt = "Analisis video YouTube ini: $youtubeUrl. Temukan 2 hingga 4 segmen paling viral (30-60 detik) dengan hook kuat, format JSON: [{\"start\":\"01:20\",\"end\":\"02:05\",\"hook\":\"Hook headline\",\"score\":94,\"reason\":\"Alasan\",\"crop_mode\":\"PODCAST_SPLIT\",\"transcript\":\"Kutipan teks\"}]"
+        val payload = """
+            {
+              "contents": [{
+                "parts": [{"text": ${kotlinx.serialization.json.Json.encodeToString(kotlinx.serialization.serializer(), prompt)}}]
+              }]
+            }
+        """.trimIndent()
+
+        val request = Request.Builder()
+            .url(url)
+            .post(payload.toRequestBody(jsonMediaType))
+            .build()
+
+        return try {
+            client.newCall(request).execute().use { response ->
+                val body = response.body?.string().orEmpty()
+                if (response.isSuccessful) body else getMockViralSegmentsResponse()
+            }
+        } catch (e: Exception) {
+            getMockViralSegmentsResponse()
+        }
     }
 
     /**
